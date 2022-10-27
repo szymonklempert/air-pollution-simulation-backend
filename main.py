@@ -36,8 +36,8 @@ MOCKED_MATRIX = ResponseMatrix(
     matrix=[Cell(temp=0+0.5*i, pm2_5=(10+0.1*i), pm10=(25+0.1*i)) for i in range(100)]
 )
 
-@app.get("/matrix")
-async def get_matrix() -> ResponseMatrix:
+@app.get("/matrix/{snapshot}")
+async def get_matrix(snapshot: str) -> ResponseMatrix:
     return MOCKED_MATRIX
 
 
