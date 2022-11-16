@@ -1,11 +1,14 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 
 class Cell(BaseModel):
     temp: float
+    pressure: Optional[int]
     pm2_5: float
     pm10: float
+    wind_speed: Optional[float]
+    wind_direction: Optional[int]
 
 class MapMatrix(BaseModel):
     x: int
