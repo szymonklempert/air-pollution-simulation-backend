@@ -23,13 +23,12 @@ async def get_simulation(matrix: MapMatrix) -> Dict[str, MapMatrix]:
     simulation_dict = {}
     calculate_simulation = np.vectorize(simulate)
 
-    previous_np_matrix = np_matrix
+    previous_np_matrix = np_matrix  
     for i in range(100):
         curr_np_matrix = calculate_simulation(previous_np_matrix)
         cell_list = get_cell_list(curr_np_matrix)
         simulation_dict[str(i)] = MapMatrix(x=matrix.x, y=matrix.y, k=matrix.k, matrix=cell_list)
         previous_np_matrix = curr_np_matrix
-
     return simulation_dict
 
 
