@@ -21,21 +21,20 @@ app.add_middleware(
     allow_headers=[""],
 )
 
+
 @app.post("/matrix/")
 async def push_matrix(matrix: MapMatrix) -> MapMatrix:
-    with open('matrix.json', 'w') as f:
+    with open("matrix.json", "w") as f:
         json.dump(matrix.dict(), f)
     return matrix
 
 
 @app.get("/matrix/{snapshot}")
 async def get_matrix(snapshot: str) -> ResponseMatrix:
-
-    response_matrix = await simulator.get_map_matrix(snapshot=snapshot)
+    response_matrix = await simulator.get_response_matrix(snapshot=snapshot)
     return response_matrix
 
 
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
-
