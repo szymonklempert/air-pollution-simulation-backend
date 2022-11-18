@@ -1,7 +1,9 @@
 import json
 from models.MatrixModels import MapMatrix, Cell, ResponseMatrix
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import numpy as np
+import random
+
 
 WINDOW_SIZE = 3
 
@@ -47,143 +49,192 @@ async def get_simulation(matrix: MapMatrix) -> Dict[str, MapMatrix]:
 
 
 def simulate(matrix: np.ndarray, k: float, x_size: int, y_size: int):
-    D = k * 0.245
+    res_matrix: np.ndarray(dtype=Cell) = parse_matrix(x_size, y_size)
 
-    res_matrix = parse_matrix(x_size, y_size)
-
-    for x in range(x_size - 1):
-        for y in range(y_size - 1):
+    for x in range(x_size):
+        for y in range(y_size):
             res_pm10 = 0
             res_pm2_5 = 0
 
+            current_cell = matrix[x][y]
+
             if x == 0 and y == 0:
-                res_pm10 += D * (
-                    (matrix[x][y].pm10 - matrix[x][y + 1].pm10)
-                    + (matrix[x][y].pm10 - matrix[x + 1][y].pm10)
-                )
-                res_pm10 += (
-                    1 / np.sqrt(2) * D * (matrix[x][y].pm10 - matrix[x + 1][y + 1].pm10)
+                res_pm2_5, res_pm10 = calculate_pm_diffusion(
+                    current_cell=current_cell,
+                    cells=[matrix[x][y + 1], matrix[x + 1][y]],
+                    diagonal_cells=[matrix[x + 1][y + 1]],
+                    k=k,
                 )
 
-                res_pm2_5 += D * (
-                    (matrix[x][y].pm2_5 - matrix[x][y + 1].pm2_5)
-                    + (matrix[x][y].pm2_5 - matrix[x + 1][y].pm2_5)
+            elif x == 0 and y == y_size - 1:
+                res_pm2_5, res_pm10 = calculate_pm_diffusion(
+                    current_cell=current_cell,
+                    cells=[matrix[x][y - 1], matrix[x + 1][y]],
+                    diagonal_cells=[matrix[x + 1][y - 1]],
+                    k=k,
                 )
-                res_pm2_5 += (
-                    1
-                    / np.sqrt(2)
-                    * D
-                    * (matrix[x][y].pm2_5 - matrix[x + 1][y + 1].pm2_5)
+
+            elif x == x_size - 1 and y == y_size - 1:
+                res_pm2_5, res_pm10 = calculate_pm_diffusion(
+                    current_cell=current_cell,
+                    cells=[matrix[x][y - 1], matrix[x - 1][y]],
+                    diagonal_cells=[matrix[x - 1][y - 1]],
+                    k=k,
+                )
+
+            elif x == x_size - 1 and y == 0:
+                res_pm2_5, res_pm10 = calculate_pm_diffusion(
+                    current_cell=current_cell,
+                    cells=[matrix[x][y + 1], matrix[x - 1][y]],
+                    diagonal_cells=[matrix[x - 1][y + 1]],
+                    k=k,
                 )
 
             elif x == 0:
-                res_pm10 += D * (
-                    (matrix[x][y].pm10 - matrix[x][y + 1].pm10)
-                    + (matrix[x][y].pm10 - matrix[x][y - 1].pm10)
-                    + (matrix[x][y].pm10 - matrix[x + 1][y].pm10)
-                )
-                res_pm10 += (
-                    1
-                    / np.sqrt(2)
-                    * D
-                    * (
-                        (matrix[x][y].pm10 - matrix[x + 1][y + 1].pm10)
-                        + (matrix[x][y].pm10 - matrix[x + 1][y - 1].pm10)
-                    )
-                )
-
-                res_pm2_5 += D * (
-                    (matrix[x][y].pm2_5 - matrix[x][y + 1].pm2_5)
-                    + (matrix[x][y].pm2_5 - matrix[x][y - 1].pm2_5)
-                    + (matrix[x][y].pm2_5 - matrix[x + 1][y].pm2_5)
-                )
-                res_pm2_5 += (
-                    1
-                    / np.sqrt(2)
-                    * D
-                    * (
-                        (matrix[x][y].pm2_5 - matrix[x + 1][y + 1].pm2_5)
-                        + (matrix[x][y].pm2_5 - matrix[x + 1][y - 1].pm2_5)
-                    )
+                res_pm2_5, res_pm10 = calculate_pm_diffusion(
+                    current_cell=current_cell,
+                    cells=[matrix[x][y + 1], matrix[x][y - 1], matrix[x + 1][y]],
+                    diagonal_cells=[matrix[x + 1][y + 1], matrix[x + 1][y - 1]],
+                    k=k,
                 )
 
             elif y == 0:
-                res_pm10 += D * (
-                    (matrix[x][y].pm10 - matrix[x + 1][y].pm10)
-                    + (matrix[x][y].pm10 - matrix[x - 1][y].pm10)
-                    + (matrix[x][y].pm10 - matrix[x][y + 1].pm10)
-                )
-                res_pm10 += (
-                    1
-                    / np.sqrt(2)
-                    * D
-                    * (
-                        (matrix[x][y].pm10 - matrix[x + 1][y + 1].pm10)
-                        + (matrix[x][y].pm10 - matrix[x - 1][y + 1].pm10)
-                    )
+                res_pm2_5, res_pm10 = calculate_pm_diffusion(
+                    current_cell=current_cell,
+                    cells=[matrix[x + 1][y], matrix[x - 1][y], matrix[x][y + 1]],
+                    diagonal_cells=[matrix[x + 1][y + 1], matrix[x - 1][y + 1]],
+                    k=k,
                 )
 
-                res_pm2_5 += D * (
-                    (matrix[x][y].pm2_5 - matrix[x + 1][y].pm2_5)
-                    + (matrix[x][y].pm2_5 - matrix[x - 1][y].pm2_5)
-                    + (matrix[x][y].pm2_5 - matrix[x][y + 1].pm2_5)
-                )
-                res_pm2_5 += (
-                    1
-                    / np.sqrt(2)
-                    * D
-                    * (
-                        (matrix[x][y].pm2_5 - matrix[x + 1][y + 1].pm2_5)
-                        + (matrix[x][y].pm2_5 - matrix[x - 1][y + 1].pm2_5)
-                    )
+            elif x == x_size - 1:
+                res_pm2_5, res_pm10 = calculate_pm_diffusion(
+                    current_cell=current_cell,
+                    cells=[matrix[x][y + 1], matrix[x][y - 1], matrix[x - 1][y]],
+                    diagonal_cells=[matrix[x - 1][y + 1], matrix[x - 1][y - 1]],
+                    k=k,
                 )
 
-
+            elif y == y_size - 1:
+                res_pm2_5, res_pm10 = calculate_pm_diffusion(
+                    current_cell=current_cell,
+                    cells=[matrix[x + 1][y], matrix[x - 1][y], matrix[x][y - 1]],
+                    diagonal_cells=[matrix[x + 1][y - 1], matrix[x - 1][y - 1]],
+                    k=k,
+                )
 
             else:
                 cur_window: List[List[Cell]] = matrix[x - 1 : x + 2, y - 1 : y + 2]
-                current_cell: Cell = cur_window[1][1]
+                current_window_cell: Cell = cur_window[1][1]
 
-                res_pm10 += D * (
-                    (current_cell.pm10 - cur_window[0][1].pm10)
-                    + (current_cell.pm10 - cur_window[1][0].pm10)
-                    + (current_cell.pm10 - cur_window[1][2].pm10)
-                    + (current_cell.pm10 - cur_window[2][1].pm10)
-                )
-                res_pm10 += (
-                    1
-                    / np.sqrt(2)
-                    * D
-                    * (
-                        (current_cell.pm10 - cur_window[0][0].pm10)
-                        + (current_cell.pm10 - cur_window[0][2].pm10)
-                        + (current_cell.pm10 - cur_window[2][0].pm10)
-                        + (current_cell.pm10 - cur_window[2][2].pm10)
-                    )
-                )
-
-                res_pm2_5 += D * (
-                    (current_cell.pm2_5 - cur_window[0][1].pm2_5)
-                    + (current_cell.pm2_5 - cur_window[1][0].pm2_5)
-                    + (current_cell.pm2_5 - cur_window[1][2].pm2_5)
-                    + (current_cell.pm2_5 - cur_window[2][1].pm2_5)
-                )
-                res_pm2_5 += (
-                    1
-                    / np.sqrt(2)
-                    * D
-                    * (
-                        (current_cell.pm2_5 - cur_window[0][0].pm2_5)
-                        + (current_cell.pm2_5 - cur_window[0][2].pm2_5)
-                        + (current_cell.pm2_5 - cur_window[2][0].pm2_5)
-                        + (current_cell.pm2_5 - cur_window[2][2].pm2_5)
-                    )
+                res_pm2_5, res_pm10 = calculate_pm_diffusion(
+                    current_cell=current_window_cell,
+                    cells=[
+                        cur_window[0][1],
+                        cur_window[1][0],
+                        cur_window[1][2],
+                        cur_window[2][1],
+                    ],
+                    diagonal_cells=[
+                        cur_window[0][0],
+                        cur_window[0][2],
+                        cur_window[2][0],
+                        cur_window[2][2],
+                    ],
+                    k=k,
                 )
 
-            res_matrix[x][y].pm10 = res_pm10
+            pm2_5_clapeyron, pm10_clapeyron = calculate_pm_clapeyron(current_cell)
+            res_pm2_5 += pm2_5_clapeyron
+            res_pm10 += pm10_clapeyron
+
+            res_matrix[x][y].pm2_5 = res_pm2_5
             res_matrix[x][y].pm10 = res_pm10
 
     return matrix - res_matrix
+
+
+def calculate_pm_clapeyron(current_cell: Cell) -> Tuple[float, float]:
+    """
+    Calculate the pm based on The Clapeyron Equation
+    """
+
+    temp_delta = random.uniform(-1.0, 1.0)
+    pressure_delta = random.randint(-10, 10)
+
+    t0 = current_cell.temp
+    t1 = current_cell.temp + temp_delta
+
+    if current_cell.pressure:
+        p0 = current_cell.pressure
+        p1 = current_cell.pressure + pressure_delta
+    else:
+        p0 = 1012
+        p1 = 1012 + pressure_delta
+
+    pm2_5 = current_cell.pm2_5 * ((t0 / t1) * (p1 / p0))
+    pm10 = current_cell.pm10 * ((t0 / t1) * (p1 / p0))
+
+    # print("pm10", current_cell.pm10)
+    # print("t", t1 / t0)
+    # print("p", p1 / p0)
+    # print("res", ((t0 / t1) * (p1 / p0)))
+    # print(pm2_5, pm10)
+    return pm2_5 - current_cell.pm2_5, pm10 - current_cell.pm10
+
+
+def calculate_pm_diffusion(
+    current_cell: Cell, cells: List[Cell], diagonal_cells: List[Cell], k: int
+) -> Tuple[float, float]:
+    """
+    Calculate the pm based on The Diffusion Equation
+    """
+
+    pm2_5 = calculate_pm2_5(current_cell, cells, diagonal_cells, k)
+    pm10 = calculate_pm10(current_cell, cells, diagonal_cells, k)
+
+    return pm2_5, pm10
+
+
+def calculate_pm2_5(
+    current_cell: Cell, cells: List[Cell], diagonal_cells: List[Cell], k: int
+):
+    D = k * 0.245
+
+    new_pm2_5 = 0
+
+    for cell in cells:
+        new_pm2_5 += current_cell.pm2_5 - cell.pm2_5
+
+    new_pm2_5 *= D
+
+    for d_cell in diagonal_cells:
+        new_pm2_5 += current_cell.pm2_5 - d_cell.pm2_5
+
+    new_pm2_5 *= 1 / np.sqrt(2)
+    new_pm2_5 *= D
+
+    return new_pm2_5
+
+
+def calculate_pm10(
+    current_cell: Cell, cells: List[Cell], diagonal_cells: List[Cell], k: int
+):
+    D = k * 0.245
+
+    new_pm10 = 0
+
+    for cell in cells:
+        new_pm10 += current_cell.pm10 - cell.pm10
+
+    new_pm10 *= D
+
+    for d_cell in diagonal_cells:
+        new_pm10 += current_cell.pm10 - d_cell.pm10
+
+    new_pm10 *= 1 / np.sqrt(2)
+    new_pm10 *= D
+
+    return new_pm10
 
 
 def get_cell_list(matrix: np.ndarray) -> List[Cell]:
